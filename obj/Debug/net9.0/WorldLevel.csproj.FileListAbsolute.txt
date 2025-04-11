@@ -1,0 +1,13 @@
+C:\Users\jgran\Documents\TShock Projects\WorldLevel\bin\Debug\net9.0\HttpServer.dll
+C:\Users\jgran\Documents\TShock Projects\WorldLevel\bin\Debug\net9.0\WorldLevel.deps.json
+C:\Users\jgran\Documents\TShock Projects\WorldLevel\bin\Debug\net9.0\WorldLevel.dll
+C:\Users\jgran\Documents\TShock Projects\WorldLevel\bin\Debug\net9.0\WorldLevel.pdb
+C:\Users\jgran\Documents\TShock Projects\WorldLevel\obj\Debug\net9.0\WorldLevel.csproj.AssemblyReference.cache
+C:\Users\jgran\Documents\TShock Projects\WorldLevel\obj\Debug\net9.0\WorldLevel.GeneratedMSBuildEditorConfig.editorconfig
+C:\Users\jgran\Documents\TShock Projects\WorldLevel\obj\Debug\net9.0\WorldLevel.AssemblyInfoInputs.cache
+C:\Users\jgran\Documents\TShock Projects\WorldLevel\obj\Debug\net9.0\WorldLevel.AssemblyInfo.cs
+C:\Users\jgran\Documents\TShock Projects\WorldLevel\obj\Debug\net9.0\WorldLevel.csproj.CoreCompileInputs.cache
+C:\Users\jgran\Documents\TShock Projects\WorldLevel\obj\Debug\net9.0\WorldLevel.dll
+C:\Users\jgran\Documents\TShock Projects\WorldLevel\obj\Debug\net9.0\refint\WorldLevel.dll
+C:\Users\jgran\Documents\TShock Projects\WorldLevel\obj\Debug\net9.0\WorldLevel.pdb
+C:\Users\jgran\Documents\TShock Projects\WorldLevel\obj\Debug\net9.0\ref\WorldLevel.dll
