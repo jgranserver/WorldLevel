@@ -16,18 +16,18 @@ namespace WorldLevel
         private readonly Random _random = new();
         private readonly BankService _bankService;
         private readonly Dictionary<int, TaskContribution> _currentTaskContributions;
+        private readonly NPCRarityService _npcRarityService;
 
         // Constants for task generation and rewards
-        private const int BASE_GOAL = 100;
         private const int GOAL_LEVEL_SCALING = 2;
         private const double REWARD_MULTIPLIER = 2.0;
-        private const int MIN_MOBS_REQUIRED = 3;
 
         public TaskManager(WorldData worldData)
         {
             _worldData = worldData;
             _bankService = new BankService();
             _currentTaskContributions = new Dictionary<int, TaskContribution>();
+            _npcRarityService = new NPCRarityService();
             // Initialize required XP for first level if not set
             if (_worldData.RequiredXP == 0)
             {
@@ -108,8 +108,8 @@ namespace WorldLevel
 
         private void CreateTask(int npcId, BossType bossType, string biome)
         {
-            var goal = CalculateGoal();
-            var reward = CalculateReward(goal, GetBiomeDifficulty(biome));
+            var goal = CalculateGoal(npcId);
+            var reward = CalculateReward(npcId, goal, biome);
 
             _worldData.CurrentTask = new ActiveTask
             {
@@ -124,15 +124,22 @@ namespace WorldLevel
             TaskBroadcaster.AnnounceNewTask(_worldData.CurrentTask, _worldData, biome);
         }
 
-        private int CalculateGoal() =>
-            Math.Max(MIN_MOBS_REQUIRED, BASE_GOAL + (_worldData.WorldLevel * GOAL_LEVEL_SCALING));
-
-        private int CalculateReward(int goal, double difficultyMultiplier)
+        private int CalculateGoal(int npcId)
         {
-            // Scale rewards based on current level and make them more gradual
-            var baseReward = goal * REWARD_MULTIPLIER;
-            var levelMultiplier = Math.Max(1.0, _worldData.WorldLevel * 0.5);
-            return (int)(baseReward * levelMultiplier * difficultyMultiplier);
+            var rarity = _npcRarityService.GetNPCRarity(npcId);
+            var baseRequirement = _npcRarityService.GetRequiredKills(rarity);
+
+            // Scale with world level
+            return baseRequirement + (_worldData.WorldLevel * GOAL_LEVEL_SCALING);
+        }
+
+        private int CalculateReward(int npcId, int kills, string biome)
+        {
+            var baseReward = kills * REWARD_MULTIPLIER;
+            var biomeDifficulty = GetBiomeDifficulty(biome);
+            var xpMultiplier = _npcRarityService.GetXPMultiplier(npcId);
+
+            return (int)(baseReward * biomeDifficulty * xpMultiplier);
         }
 
         private double GetBiomeDifficulty(string biome) =>
