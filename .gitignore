@@ -1,0 +1,69 @@
+# Build results
+[Dd]ebug/
+[Dd]ebugPublic/
+[Rr]elease/
+[Rr]eleases/
+x64/
+x86/
+[Ww][Ii][Nn]32/
+[Aa][Rr][Mm]/
+[Aa][Rr][Mm]64/
+bld/
+[Bb]in/
+[Oo]bj/
+[Ll]og/
+[Ll]ogs/
+
+# Visual Studio files
+.vs/
+*.user
+*.userosscache
+*.suo
+*.userprefs
+*.dbmdl
+*.dbproj.schemaview
+*.pfx
+*.publishsettings
+
+# Visual Studio Code files
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+*.code-workspace
+
+# TShock specific
+*.sqlite
+*.sqlite3
+tshock/*
+ServerPlugins/*
+config.json
+npc-rarity.json
+worldlevel.json
+
+# Build results specific to this project
+*.dll
+*.pdb
+*.xml
+*.nupkg
+
+# Windows specific
+Thumbs.db
+Desktop.ini
+
+# macOS specific
+.DS_Store
+
+# IDE specific
+.idea/
+*.swp
+*.swo
+*.*~
+
+# NuGet packages
+packages/
+*.nupkg
+*.snupkg
+# Include nuget.exe if it exists
+!nuget.exe
