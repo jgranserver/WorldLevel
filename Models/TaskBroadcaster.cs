@@ -13,8 +13,13 @@ namespace WorldLevel.Models
         public static void AnnounceNewTask(ActiveTask task, WorldData worldData, string biome)
         {
             var npcName = Lang.GetNPCNameValue(task.TargetMobId);
-            var bossType = Enum.Parse<BossType>(task.AssociatedBoss);
             var location = GetBiomeDescription(biome);
+
+            // Find next boss to unlock
+            var nextBoss = TaskDefinitions
+                .BossLevelRequirements.Where(b => b.Value > worldData.WorldLevel)
+                .OrderBy(b => b.Value)
+                .FirstOrDefault();
 
             // Main task announcement
             TSPlayer.All.SendMessage(
@@ -31,8 +36,14 @@ namespace WorldLevel.Models
                 Color.Yellow
             );
 
-            // Boss association
-            TSPlayer.All.SendMessage($"This will help prepare for {bossType}!", Color.LightBlue);
+            // Next boss announcement
+            if (!nextBoss.Equals(default(KeyValuePair<BossType, int>)))
+            {
+                TSPlayer.All.SendMessage(
+                    $"Complete tasks to reach Level {nextBoss.Value} and unlock {nextBoss.Key}!",
+                    Color.LightBlue
+                );
+            }
         }
 
         public static void BroadcastProgress(ActiveTask task, WorldData worldData)
