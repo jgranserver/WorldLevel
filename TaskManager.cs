@@ -1,9 +1,12 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using Terraria;
 using Terraria.ID;
 using TShockAPI;
 using WorldLevel.Models;
+using WorldLevel.Services;
 
 namespace WorldLevel
 {
@@ -11,6 +14,8 @@ namespace WorldLevel
     {
         private readonly WorldData _worldData;
         private readonly Random _random = new();
+        private readonly BankService _bankService;
+        private readonly Dictionary<int, TaskContribution> _currentTaskContributions;
 
         // Constants for task generation and rewards
         private const int BASE_GOAL = 100;
@@ -21,6 +26,8 @@ namespace WorldLevel
         public TaskManager(WorldData worldData)
         {
             _worldData = worldData;
+            _bankService = new BankService();
+            _currentTaskContributions = new Dictionary<int, TaskContribution>();
             // Initialize required XP for first level if not set
             if (_worldData.RequiredXP == 0)
             {
@@ -53,42 +60,31 @@ namespace WorldLevel
                     ? NPCIdentifier.HardmodeEnemies
                     : NPCIdentifier.PreHardmodeEnemies;
 
-                // Log available enemy groups for debugging
-                foreach (var group in enemies)
-                {
-                    TShock.Log.Debug(
-                        $"Available enemy group: {group.Key} with {group.Value.NpcIds.Length} NPCs"
-                    );
-                }
+                // Find next boss to unlock based on world level
+                var nextBoss = TaskDefinitions
+                    .BossLevelRequirements.Where(b => b.Value > _worldData.WorldLevel)
+                    .OrderBy(b => b.Value)
+                    .FirstOrDefault();
 
-                // Get task group for current level
-                var taskGroup = TaskDefinitions.GetAppropriateTaskGroup(
-                    _worldData.WorldLevel,
-                    Main.hardMode
-                );
-                if (taskGroup == null)
+                if (nextBoss.Equals(default(KeyValuePair<BossType, int>)))
                 {
-                    TShock.Log.Debug($"No task group found for level {_worldData.WorldLevel}");
+                    TShock.Log.Debug("No more bosses to unlock, using fallback task");
                     CreateFallbackTask();
                     return;
                 }
 
-                TShock.Log.Debug($"Found task group for level {taskGroup.RequiredLevel}");
+                TShock.Log.Debug(
+                    $"Generating task for next boss: {nextBoss.Key} (Level {nextBoss.Value})"
+                );
 
-                // Get available biome groups that match the task level
+                // Get available biome groups that are appropriate for the next boss
                 var availableGroups = enemies
-                    .Where(g =>
-                        g.Value.Bosses.Any(b =>
-                            TaskDefinitions.GetRequiredLevelForBoss(b) <= _worldData.WorldLevel
-                        )
-                    )
+                    .Where(g => g.Value.Bosses.Contains(nextBoss.Key))
                     .ToList();
 
                 if (!availableGroups.Any())
                 {
-                    TShock.Log.Debug(
-                        $"No enemy groups available for level {_worldData.WorldLevel}"
-                    );
+                    TShock.Log.Debug($"No enemy groups available for boss {nextBoss.Key}");
                     CreateFallbackTask();
                     return;
                 }
@@ -99,10 +95,9 @@ namespace WorldLevel
 
                 var availableNpcs = randomGroup.Value.NpcIds;
                 var randomNpcId = availableNpcs[_random.Next(availableNpcs.Length)];
-                var associatedBoss = randomGroup.Value.Bosses.First();
 
-                TShock.Log.Debug($"Creating task with NPC {randomNpcId} for boss {associatedBoss}");
-                CreateTask(randomNpcId, associatedBoss, randomGroup.Key);
+                TShock.Log.Debug($"Creating task with NPC {randomNpcId} for boss {nextBoss.Key}");
+                CreateTask(randomNpcId, nextBoss.Key, randomGroup.Key);
             }
             catch (Exception ex)
             {
@@ -153,68 +148,75 @@ namespace WorldLevel
                 _ => 1.0,
             };
 
-        private void CheckTaskCompletion()
+        private async void CheckTaskCompletion()
         {
             if (_worldData.CurrentTask?.Progress >= _worldData.CurrentTask?.Goal)
             {
-                CompleteTask();
+                await CompleteTask();
             }
         }
 
-        public void HandleNpcKill(int npcId, bool canBroadcast)
+        public async void HandleNpcKill(int npcId, TSPlayer killer, bool canBroadcast = true)
         {
-            // Add debug logging for task validation
-            if (_worldData.CurrentTask == null)
-            {
-                TShock.Log.Debug($"HandleNpcKill: No active task");
+            if (_worldData.CurrentTask == null || !IsValidKillForTask(npcId))
                 return;
+
+            // Track contribution
+            if (!_currentTaskContributions.ContainsKey(killer.Account.ID))
+            {
+                _currentTaskContributions[killer.Account.ID] = new TaskContribution(
+                    killer.Account.ID,
+                    killer.Name
+                );
             }
 
-            // Log current task details for debugging
-            TShock.Log.Debug(
-                $"HandleNpcKill: Current Task - Target: {_worldData.CurrentTask.TargetMobId}, Killed: {npcId}"
-            );
-
-            if (_worldData.CurrentTask.TargetMobId != npcId)
-            {
-                // Check if NPC belongs to current task's biome group
-                var enemies = Main.hardMode
-                    ? NPCIdentifier.HardmodeEnemies
-                    : NPCIdentifier.PreHardmodeEnemies;
-
-                var biomeGroup = enemies.FirstOrDefault(g => g.Value.NpcIds.Contains(npcId));
-                if (!string.IsNullOrEmpty(biomeGroup.Key))
-                {
-                    TShock.Log.Debug($"HandleNpcKill: NPC belongs to biome {biomeGroup.Key}");
-                }
-                return;
-            }
-
-            // Valid kill for current task
-            TShock.Log.Debug(
-                $"HandleNpcKill: Valid kill for task - Progress: {_worldData.CurrentTask.Progress + 1}/{_worldData.CurrentTask.Goal}"
-            );
-
+            _currentTaskContributions[killer.Account.ID].Kills++;
             _worldData.CurrentTask.Progress++;
 
-            // Only try to broadcast if allowed
+            // Show personal contribution
+            var contribution = _currentTaskContributions[killer.Account.ID];
+            killer.SendInfoMessage(
+                $"Your contribution: {contribution.Kills} kills ({contribution.Kills * 100.0f / _worldData.CurrentTask.Goal:F1}% of goal)"
+            );
+
+            // Only broadcast progress if allowed
             if (canBroadcast)
             {
                 TaskBroadcaster.BroadcastProgress(_worldData.CurrentTask, _worldData);
             }
 
-            // Check for task completion
             if (_worldData.CurrentTask.Progress >= _worldData.CurrentTask.Goal)
             {
-                TShock.Log.Debug("HandleNpcKill: Task complete, calling CompleteTask()");
-                CompleteTask();
+                await CompleteTask();
             }
         }
 
-        private void CompleteTask()
+        private async Task CompleteTask()
         {
             if (_worldData.CurrentTask == null)
                 return;
+
+            // Calculate base reward based on world level
+            int baseReward = 100000 + (_worldData.WorldLevel * 500);
+
+            // Distribute rewards based on contributions
+            await _bankService.DistributeTaskRewards(_currentTaskContributions, baseReward);
+
+            // Broadcast completion messages with contribution info
+            var topContributor = _currentTaskContributions
+                .OrderByDescending(c => c.Value.Kills)
+                .FirstOrDefault();
+
+            if (topContributor.Value != null)
+            {
+                TShock.Utils.Broadcast(
+                    $"Task Complete! Top contributor: {topContributor.Value.PlayerName} with {topContributor.Value.Kills} kills!",
+                    Microsoft.Xna.Framework.Color.LightGreen
+                );
+            }
+
+            // Clear contributions for next task
+            _currentTaskContributions.Clear();
 
             var oldLevel = _worldData.WorldLevel;
             _worldData.CurrentXP += _worldData.CurrentTask.RewardXP;
@@ -244,7 +246,116 @@ namespace WorldLevel
 
         private void CreateFallbackTask()
         {
-            CreateTask(NPCID.BlueSlime, BossType.KingSlime, "Surface");
+            try
+            {
+                // Get level 0 tasks
+                var level0Tasks = TaskDefinitions
+                    .BossTasks.Where(bt => bt.Task.RequiredLevel == 0)
+                    .ToList();
+
+                if (!level0Tasks.Any())
+                {
+                    TShock.Log.Error("No level 0 tasks found, using basic slime task");
+                    CreateTask(NPCID.BlueSlime, BossType.KingSlime, "Surface");
+                    return;
+                }
+
+                // Select random level 0 task
+                var randomTask = level0Tasks[_random.Next(level0Tasks.Count)];
+
+                // Get appropriate enemy group for the task
+                var enemies = NPCIdentifier.PreHardmodeEnemies;
+                var taskGroup = enemies.FirstOrDefault(g =>
+                    g.Value.Bosses.Contains(randomTask.Boss)
+                );
+
+                if (
+                    taskGroup.Equals(
+                        default(KeyValuePair<string, (int[] NpcIds, HashSet<BossType> Bosses)>)
+                    )
+                )
+                {
+                    TShock.Log.Error(
+                        $"No enemy group found for boss {randomTask.Boss}, using basic enemies task"
+                    );
+                    CreateTask(NPCID.BlueSlime, BossType.KingSlime, "Surface");
+                    return;
+                }
+
+                // Select random NPC from the group
+                var randomNpcId = taskGroup.Value.NpcIds[
+                    _random.Next(taskGroup.Value.NpcIds.Length)
+                ];
+
+                TShock.Log.Debug(
+                    $"Creating fallback task with NPC {randomNpcId} for boss {randomTask.Boss}"
+                );
+                CreateTask(randomNpcId, randomTask.Boss, taskGroup.Key);
+            }
+            catch (Exception ex)
+            {
+                TShock.Log.Error($"Error creating fallback task: {ex}");
+                // Ultimate fallback - basic slime task
+                CreateTask(NPCID.BlueSlime, BossType.KingSlime, "Surface");
+            }
+        }
+
+        private bool IsValidKillForTask(int npcId)
+        {
+            // Add debug logging for task validation
+            if (_worldData.CurrentTask == null)
+            {
+                TShock.Log.Debug($"HandleNpcKill: No active task");
+                return false;
+            }
+
+            // Log current task details for debugging
+            TShock.Log.Debug(
+                $"HandleNpcKill: Current Task - Target: {_worldData.CurrentTask.TargetMobId}, Killed: {npcId}"
+            );
+
+            // Handle both positive and negative NPC IDs
+            bool isValidKill = false;
+            if (_worldData.CurrentTask.TargetMobId < 0)
+            {
+                // For negative IDs (special events), check exact match
+                isValidKill = _worldData.CurrentTask.TargetMobId == npcId;
+                TShock.Log.Debug(
+                    $"HandleNpcKill: Checking special event NPC - Match: {isValidKill}"
+                );
+            }
+            else if (npcId > 0)
+            {
+                // For positive IDs (regular NPCs), check normal conditions
+                isValidKill = _worldData.CurrentTask.TargetMobId == npcId;
+
+                if (!isValidKill)
+                {
+                    // Check if NPC belongs to current task's biome group
+                    var enemies = Main.hardMode
+                        ? NPCIdentifier.HardmodeEnemies
+                        : NPCIdentifier.PreHardmodeEnemies;
+
+                    var biomeGroup = enemies.FirstOrDefault(g => g.Value.NpcIds.Contains(npcId));
+                    if (!string.IsNullOrEmpty(biomeGroup.Key))
+                    {
+                        TShock.Log.Debug($"HandleNpcKill: NPC belongs to biome {biomeGroup.Key}");
+                    }
+                }
+            }
+
+            if (!isValidKill)
+            {
+                TShock.Log.Debug($"HandleNpcKill: Invalid kill - NPC ID: {npcId}");
+                return false;
+            }
+
+            // Valid kill for current task
+            TShock.Log.Debug(
+                $"HandleNpcKill: Valid kill for task - Progress: {_worldData.CurrentTask.Progress + 1}/{_worldData.CurrentTask.Goal}"
+            );
+
+            return true;
         }
     }
 }
