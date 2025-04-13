@@ -87,29 +87,27 @@ namespace WorldLevel
                     return;
 
                 var npcId = args.npc.netID;
-                if (npcId <= 0)
-                {
-                    TShock.Log.Debug($"Invalid NPC ID in OnNPCKill: {npcId}");
-                    return;
-                }
-
-                // Add debug logging
                 TShock.Log.Debug($"NPC Killed - ID: {npcId}, Name: {Lang.GetNPCNameValue(npcId)}");
 
+                // Check if NPC matches current task
                 if (_worldData.CurrentTask?.TargetMobId == npcId)
                 {
-                    // Check broadcast cooldown
                     bool canBroadcast =
                         (DateTime.Now - _lastTaskBroadcast).TotalSeconds
                         >= BROADCAST_COOLDOWN_SECONDS;
+
+                    var player = TShock.Players.FirstOrDefault(p =>
+                        p?.Active == true && p.Index == args.npc.target
+                    );
+
+                    _taskManager?.HandleNpcKill(npcId, player, canBroadcast);
 
                     if (canBroadcast)
                     {
                         _lastTaskBroadcast = DateTime.Now;
                     }
 
-                    _taskManager?.HandleNpcKill(npcId, canBroadcast);
-                    SaveWorldData(); // Save progress after each valid kill
+                    SaveWorldData();
                 }
             }
             catch (Exception ex)
@@ -133,9 +131,6 @@ namespace WorldLevel
                 TShock.Log.Debug("Player is null, skipping boss spawn check");
                 return;
             }
-
-            // Add packet type logging
-            TShock.Log.Debug($"Packet received - Type: {args.MsgID}");
 
             if (args.MsgID == PacketTypes.SpawnBossorInvasion)
             {
@@ -337,7 +332,6 @@ namespace WorldLevel
                 progressPercent >= 50 ? Color.LightGreen : Color.Yellow
             );
             player.SendMessage($"║ Reward: {task.RewardXP:N0} XP", Color.Orange);
-            player.SendMessage($"║ Preparing for: {bossType}", Color.Pink);
             player.SendMessage("╚════════════════════════╝", Color.LightBlue);
         }
 
