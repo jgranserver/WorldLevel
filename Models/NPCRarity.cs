@@ -22,9 +22,9 @@ namespace WorldLevel.Models
         public Dictionary<NPCRarity, double> XPMultipliers { get; set; } =
             new()
             {
-                { NPCRarity.Normal, 1.0 }, // Base XP
-                { NPCRarity.Hostile, 2.0 }, // 2x XP
-                { NPCRarity.Special, 3.5 }, // 3.5x XP
+                { NPCRarity.Normal, 2.5 }, // Base XP
+                { NPCRarity.Hostile, 7.5 }, // 2x XP
+                { NPCRarity.Special, 20.5 }, // 3.5x XP
             };
 
         public HashSet<int> HostileNPCs { get; set; } =
