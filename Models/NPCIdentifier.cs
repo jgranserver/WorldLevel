@@ -24,7 +24,7 @@ namespace WorldLevel.Models
                 { BossType.QueenBee, NPCID.QueenBee },
                 { BossType.Skeletron, NPCID.SkeletronHead },
                 { BossType.WallOfFlesh, NPCID.WallofFlesh },
-                { BossType.TheTwins, NPCID.Retinazer },
+                { BossType.TheTwins, NPCID.Retinazer }, // Primary ID for The Twins
                 { BossType.TheDestroyer, NPCID.TheDestroyer },
                 { BossType.SkeletronPrime, NPCID.SkeletronPrime },
                 { BossType.Plantera, NPCID.Plantera },
@@ -62,6 +62,10 @@ namespace WorldLevel.Models
                 { BossType.MoonLord, (true, NPCID.MoonLordCore) },
             };
         }
+
+        // Add method to check for both Twins
+        public static bool IsTheTwinsBoss(int npcId) =>
+            npcId == NPCID.Retinazer || npcId == NPCID.Spazmatism;
 
         // Create enemy group helper method
         private static (int[] NpcIds, HashSet<BossType> Bosses) CreateEnemyGroup(
@@ -246,8 +250,6 @@ namespace WorldLevel.Models
                     NPCID.Crimslime,
                     NPCID.DarkMummy,
                     NPCID.DesertDjinn,
-                    NPCID.DiggerHead,
-                    NPCID.DuneSplicerHead,
                     NPCID.FloatyGross,
                     NPCID.FungoFish,
                     NPCID.Gastropod,
@@ -382,7 +384,9 @@ namespace WorldLevel.Models
             _bossProgression;
 
         // Helper methods
-        public static bool IsBossNPC(int npcId) => _bossNpcIds.ContainsValue(npcId);
+        public static bool IsBossNPC(int npcId) =>
+            _bossNpcIds.ContainsValue(npcId)
+            || (npcId == NPCID.Spazmatism && _bossNpcIds.ContainsValue(NPCID.Retinazer));
 
         public static bool IsHardmodeBoss(BossType bossType) =>
             _bossProgression.TryGetValue(bossType, out var info) && info.IsHardMode;
