@@ -33,10 +33,8 @@ namespace WorldLevel.Services
 
         public double GetXPMultiplier(int npcId)
         {
-            var rarity = GetNPCRarity(npcId);
-            return _config.XPMultipliers.TryGetValue(rarity, out double multiplier)
-                ? multiplier
-                : 1.0;
+            // Use the config's method directly
+            return _config.GetXPMultiplier(npcId);
         }
 
         private NPCRarityConfig LoadConfig()
