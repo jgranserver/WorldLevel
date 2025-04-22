@@ -55,49 +55,74 @@ namespace WorldLevel
         {
             try
             {
-                // Get appropriate enemy dictionary
+                // Get base enemy dictionary based on world state
                 var enemies = Main.hardMode
-                    ? NPCIdentifier.HardmodeEnemies
+                    ? NPCIdentifier
+                        .HardmodeEnemies.Concat(NPCIdentifier.PreHardmodeEnemies)
+                        .ToDictionary(kvp => kvp.Key, kvp => kvp.Value)
                     : NPCIdentifier.PreHardmodeEnemies;
 
-                // Find next boss to unlock based on world level
-                var nextBoss = TaskDefinitions
+                // Find all next bosses to unlock
+                var nextBosses = TaskDefinitions
                     .BossLevelRequirements.Where(b => b.Value > _worldData.WorldLevel)
                     .OrderBy(b => b.Value)
-                    .FirstOrDefault();
+                    .ToList();
 
-                if (nextBoss.Equals(default(KeyValuePair<BossType, int>)))
+                if (!nextBosses.Any())
                 {
-                    TShock.Log.Debug("No more bosses to unlock, using fallback task");
                     CreateFallbackTask();
                     return;
                 }
 
-                TShock.Log.Debug(
-                    $"Generating task for next boss: {nextBoss.Key} (Level {nextBoss.Value})"
-                );
+                // Get the next level requirement
+                var nextLevel = nextBosses.First().Value;
 
-                // Get available biome groups that are appropriate for the next boss
+                // Get available groups that contain any of the next bosses or previous bosses
                 var availableGroups = enemies
-                    .Where(g => g.Value.Bosses.Contains(nextBoss.Key))
+                    .Where(g =>
+                        g.Value.Bosses.Any(b =>
+                            // Include groups that have any boss from the next level
+                            nextBosses.Any(nb => nb.Key == b && nb.Value == nextLevel)
+                            ||
+                            // Include groups for already unlocked bosses
+                            (
+                                TaskDefinitions.BossLevelRequirements.TryGetValue(
+                                    b,
+                                    out int reqLevel
+                                )
+                                && reqLevel <= _worldData.WorldLevel
+                            )
+                        )
+                    )
                     .ToList();
 
                 if (!availableGroups.Any())
                 {
-                    TShock.Log.Debug($"No enemy groups available for boss {nextBoss.Key}");
+                    TShock.Log.Debug($"No enemy groups available for current progression");
                     CreateFallbackTask();
                     return;
                 }
 
-                // Select random group and NPC
+                // Select random group and create task
                 var randomGroup = availableGroups[_random.Next(availableGroups.Count)];
-                TShock.Log.Debug($"Selected biome group: {randomGroup.Key}");
-
                 var availableNpcs = randomGroup.Value.NpcIds;
                 var randomNpcId = availableNpcs[_random.Next(availableNpcs.Length)];
 
-                TShock.Log.Debug($"Creating task with NPC {randomNpcId} for boss {nextBoss.Key}");
-                CreateTask(randomNpcId, nextBoss.Key, randomGroup.Key);
+                // Get all bosses at the next level from this group
+                var associatedBosses = randomGroup
+                    .Value.Bosses.Where(b =>
+                        nextBosses.Any(nb => nb.Key == b && nb.Value == nextLevel)
+                    )
+                    .ToList();
+
+                var bossName = associatedBosses.Any()
+                    ? string.Join("/", associatedBosses)
+                    : nextBosses.First().Key.ToString();
+
+                TShock.Log.Debug(
+                    $"Creating task with NPC {randomNpcId} from group {randomGroup.Key} for boss(es) {bossName}"
+                );
+                CreateTask(randomNpcId, bossName, randomGroup.Key);
             }
             catch (Exception ex)
             {
@@ -106,7 +131,7 @@ namespace WorldLevel
             }
         }
 
-        private void CreateTask(int npcId, BossType bossType, string biome)
+        private void CreateTask(int npcId, string bossName, string biome)
         {
             var goal = CalculateGoal(npcId);
             var reward = CalculateReward(npcId, goal, biome);
@@ -115,7 +140,7 @@ namespace WorldLevel
             {
                 TaskType = "KILL_ENEMIES",
                 TargetMobId = npcId,
-                AssociatedBoss = bossType.ToString(),
+                AssociatedBoss = bossName,
                 Goal = goal,
                 Progress = 0,
                 RewardXP = reward,
@@ -145,14 +170,25 @@ namespace WorldLevel
         private double GetBiomeDifficulty(string biome) =>
             biome switch
             {
-                "Underground" => 1.2,
-                "Corruption" or "Crimson" => 1.3,
-                "Dungeon" => 1.4,
-                "Underworld" => 1.5,
-                "Hallow" => 1.6,
-                "Temple" => 1.7,
-                "Space" => 1.8,
-                _ => 1.0,
+                "Forest/Surface" => 1.2,
+                "Desert" => 1.4,
+                "Corruption" or "Crimson" => 1.8,
+                "Snow" => 1.3,
+                "Jungle" => 1.7,
+                "Mushroom" => 1.3,
+                "Ocean" => 1.3,
+                "Caverns" => 1.5,
+                "Floating Island" => 1.4,
+                "Dungeon" => 2.0,
+                "Underworld" => 2.1,
+                // Hardmode biomes
+                "Early Hardmode" => 2.2,
+                "Mechanical" => 2.6,
+                "Underground Jungle" => 2.9,
+                "Hallow" => 2.3,
+                "Temple" => 3.0,
+                "Celestial" => 3.2,
+                _ => 1.0, // Default/fallback value
             };
 
         private async void CheckTaskCompletion()
@@ -263,7 +299,7 @@ namespace WorldLevel
                 if (!level0Tasks.Any())
                 {
                     TShock.Log.Error("No level 0 tasks found, using basic slime task");
-                    CreateTask(NPCID.BlueSlime, BossType.KingSlime, "Surface");
+                    CreateTask(NPCID.BlueSlime, BossType.KingSlime.ToString(), "Surface");
                     return;
                 }
 
@@ -285,7 +321,7 @@ namespace WorldLevel
                     TShock.Log.Error(
                         $"No enemy group found for boss {randomTask.Boss}, using basic enemies task"
                     );
-                    CreateTask(NPCID.BlueSlime, BossType.KingSlime, "Surface");
+                    CreateTask(NPCID.BlueSlime, BossType.KingSlime.ToString(), "Surface");
                     return;
                 }
 
@@ -297,13 +333,13 @@ namespace WorldLevel
                 TShock.Log.Debug(
                     $"Creating fallback task with NPC {randomNpcId} for boss {randomTask.Boss}"
                 );
-                CreateTask(randomNpcId, randomTask.Boss, taskGroup.Key);
+                CreateTask(randomNpcId, randomTask.Boss.ToString(), taskGroup.Key);
             }
             catch (Exception ex)
             {
                 TShock.Log.Error($"Error creating fallback task: {ex}");
                 // Ultimate fallback - basic slime task
-                CreateTask(NPCID.BlueSlime, BossType.KingSlime, "Surface");
+                CreateTask(NPCID.BlueSlime, BossType.KingSlime.ToString(), "Surface");
             }
         }
 
