@@ -13,8 +13,8 @@ namespace WorldLevel.Models
     public static class TaskDefinitions
     {
         // Adjusted XP constants for proper level 0 progression
-        private const int BASE_XP = 10240; // Much lower base XP for level 0
-        private const double LEVEL_MULTIPLIER = 3.8; // Gentler scaling
+        private const int BASE_XP = 10240;
+        private const double LEVEL_MULTIPLIER = 1.5; // Gentler scaling
 
         public static readonly List<(BossType Boss, TaskGroup Task)> BossTasks = new()
         {
