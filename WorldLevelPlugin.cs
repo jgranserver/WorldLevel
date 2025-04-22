@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text.Json;
 using Microsoft.Xna.Framework;
 using Terraria;
+using Terraria.ID;
 using TerrariaApi.Server;
 using TShockAPI;
 using WorldLevel.Models;
@@ -171,7 +172,27 @@ namespace WorldLevel
 
                 TShock.Log.Debug($"Boss/Invasion spawn attempt - NPC Type: {npcType}");
 
-                // Handle only positive values (bosses) for now
+                // Special handling for The Twins
+                if (npcType == NPCID.Spazmatism || npcType == NPCID.Retinazer)
+                {
+                    var bossType = BossType.TheTwins;
+                    TShock.Log.Debug(
+                        $"Twins spawn attempt: {(npcType == NPCID.Spazmatism ? "Spazmatism" : "Retinazer")}"
+                    );
+
+                    if (!_bossControl.CanSpawnBoss(bossType))
+                    {
+                        args.Handled = true;
+                        _bossControl.PreventBossSpawn(player, npcType);
+                        TShock.Log.Debug($"Twins spawn prevented at level {_worldData.WorldLevel}");
+                        return;
+                    }
+
+                    TShock.Log.Debug($"Twins spawn allowed");
+                    return;
+                }
+
+                // Handle other bosses
                 if (npcType > 0 && NPCIdentifier.BossNPCIDs.Values.Contains(npcType))
                 {
                     var bossType = NPCIdentifier
@@ -255,6 +276,7 @@ namespace WorldLevel
                 player.SendMessage("║ /wl admin setlevel <level>", Color.White);
                 player.SendMessage("║ /wl admin addxp <amount>", Color.White);
                 player.SendMessage("║ /wl admin newtask", Color.White);
+                player.SendMessage("║ /wl admin updatexp", Color.White);
             }
             player.SendMessage("╚════════════════════════════╝", Color.LightGreen);
         }
@@ -391,6 +413,29 @@ namespace WorldLevel
                     _worldData.CurrentTask = null;
                     _taskManager?.Update();
                     player.SendSuccessMessage("Generating new task...");
+                    break;
+
+                case "updatexp":
+                    // Update XP requirements for current level
+                    _worldData.RequiredXP = TaskDefinitions.GetRequiredXPForLevel(
+                        _worldData.WorldLevel
+                    );
+
+                    // Show the update results
+                    player.SendSuccessMessage($"XP requirements updated!");
+                    player.SendInfoMessage($"Current World Level: {_worldData.WorldLevel}");
+                    player.SendInfoMessage(
+                        $"Current Progress: {_worldData.CurrentXP:N0}/{_worldData.RequiredXP:N0} XP"
+                    );
+
+                    // Show next few level requirements
+                    for (int i = _worldData.WorldLevel + 1; i <= _worldData.WorldLevel + 3; i++)
+                    {
+                        int nextLevelXP = TaskDefinitions.GetRequiredXPForLevel(i);
+                        player.SendInfoMessage($"Level {i} requires: {nextLevelXP:N0} XP");
+                    }
+
+                    SaveWorldData();
                     break;
 
                 default:
