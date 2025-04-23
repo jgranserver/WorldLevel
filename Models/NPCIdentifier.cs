@@ -7,6 +7,113 @@ namespace WorldLevel.Models
 {
     public record MinionGroup(int NpcId, string DisplayName, HashSet<BossType> AssociatedBosses);
 
+    public class NPCVariantGroup
+    {
+        public string Name { get; }
+        public HashSet<int> Variants { get; }
+
+        public NPCVariantGroup(string name, params int[] variants)
+        {
+            Name = name;
+            Variants = new HashSet<int>(variants);
+        }
+
+        public bool Contains(int npcId) => Variants.Contains(npcId);
+    }
+
+    public static class NPCVariants
+    {
+        private static readonly List<NPCVariantGroup> VariantGroups = new()
+        {
+            new NPCVariantGroup(
+                "Zombie",
+                3,
+                -26,
+                -27,
+                430,
+                132,
+                -28,
+                -29,
+                186,
+                -30,
+                -31,
+                187,
+                -32,
+                -33,
+                188,
+                -34,
+                -35,
+                189,
+                -36,
+                -37,
+                200,
+                -44,
+                -45,
+                590
+            ),
+            new NPCVariantGroup("Slime", 1, 2, 147, 184, 204, 535, 537, -5, -6, -7, -8, -9, -10),
+            new NPCVariantGroup(
+                "DemonEye",
+                2,
+                -43,
+                190,
+                -38,
+                191,
+                -39,
+                192,
+                -40,
+                193,
+                -41,
+                194,
+                -42
+            ),
+            new NPCVariantGroup("FrozenZombie", 161, 431),
+            new NPCVariantGroup("Antlion", 69, 508, 580, 509, 581, 582, 485),
+            new NPCVariantGroup("Salamander", 498, 499, 500, 501, 502, 503, 504, 505, 506),
+            new NPCVariantGroup(
+                "Hornet",
+                42,
+                -16,
+                -17,
+                231,
+                -56,
+                -57,
+                232,
+                -58,
+                -59,
+                233,
+                -60,
+                -61,
+                234,
+                -62,
+                -63,
+                235,
+                -64,
+                -65,
+                -18,
+                -19,
+                -20,
+                -21,
+                176
+            ),
+            new NPCVariantGroup("EaterOfSoul", 6, -11, -12),
+            new NPCVariantGroup("Crimera", 173, -22, -23),
+
+            // ... add other variant groups
+        };
+
+        public static NPCVariantGroup? GetVariantGroup(int npcId)
+        {
+            return VariantGroups.FirstOrDefault(g => g.Contains(npcId));
+        }
+
+        public static bool ShareSameVariantGroup(int targetNpcId, int killedNpcId)
+        {
+            var group = GetVariantGroup(targetNpcId);
+            return group?.Contains(killedNpcId) ?? false;
+        }
+    }
+
     public static class NPCIdentifier
     {
         private static readonly Dictionary<BossType, int> _bossNpcIds;
@@ -175,6 +282,11 @@ namespace WorldLevel.Models
                     58,
                     56,
                     204,
+                    -18,
+                    -19,
+                    -20,
+                    -21,
+                    176,
                 },
                 BossType.QueenBee
             ),
@@ -182,7 +294,7 @@ namespace WorldLevel.Models
                 new[] { 257, 259, 258, 634, 635, 254, 255 },
                 BossType.QueenBee
             ),
-            ["Ocean"] = CreateEnemyGroup(new[] { 64, 67, 65 }, BossType.Skeletron),
+            ["Ocean"] = CreateEnemyGroup(new[] { 64, 67 }, BossType.Skeletron),
             ["Caverns"] = CreateEnemyGroup(
                 new[]
                 {
@@ -265,7 +377,6 @@ namespace WorldLevel.Models
                     NPCID.ArmoredSkeleton,
                     NPCID.ArmoredViking,
                     NPCID.BlueArmoredBones,
-                    NPCID.BoneLee,
                     NPCID.BigMimicCorruption,
                     NPCID.BigMimicCrimson,
                     NPCID.BigMimicHallow,
@@ -390,5 +501,13 @@ namespace WorldLevel.Models
 
         public static bool IsHardmodeBoss(BossType bossType) =>
             _bossProgression.TryGetValue(bossType, out var info) && info.IsHardMode;
+
+        public static string GetNPCVariantType(int npcId)
+        {
+            return NPCVariants.GetVariantGroup(npcId)?.Name ?? "Unknown";
+        }
+
+        public static bool IsVariantOf(int npcId, string variantType) =>
+            NPCVariants.GetVariantGroup(npcId)?.Name == variantType;
     }
 }
