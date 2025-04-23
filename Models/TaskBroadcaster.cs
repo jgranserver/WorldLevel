@@ -103,4 +103,45 @@ namespace WorldLevel.Models
                 _ => biome,
             };
     }
+
+    public class MessageBatcher
+    {
+        private readonly Queue<(string Message, Color Color)> _messageQueue = new();
+        private readonly Timer _batchTimer;
+        private readonly object _lockObject = new();
+        private const int BATCH_INTERVAL_MS = 2000; // 2 seconds
+
+        public MessageBatcher()
+        {
+            _batchTimer = new Timer(ProcessBatch, null, BATCH_INTERVAL_MS, BATCH_INTERVAL_MS);
+        }
+
+        public void QueueMessage(string message, Color color)
+        {
+            lock (_lockObject)
+            {
+                _messageQueue.Enqueue((message, color));
+            }
+        }
+
+        private void ProcessBatch(object state)
+        {
+            List<(string Message, Color Color)> messagesToSend;
+
+            lock (_lockObject)
+            {
+                if (!_messageQueue.Any())
+                    return;
+
+                messagesToSend = _messageQueue.ToList();
+                _messageQueue.Clear();
+            }
+
+            // Send all queued messages at once
+            foreach (var (message, color) in messagesToSend)
+            {
+                TShock.Utils.Broadcast(message, color);
+            }
+        }
+    }
 }
