@@ -51,7 +51,7 @@ namespace WorldLevel.Models
                 -45,
                 590
             ),
-            new NPCVariantGroup("Slime", 1, 2, 147, 184, 204, 535, 537, -5, -6, -7, -8, -9, -10),
+            new NPCVariantGroup("Slime", 1, 147, 184, 204, 535, 537, -5, -6, -7, -8, -9, -10),
             new NPCVariantGroup(
                 "DemonEye",
                 2,
@@ -98,6 +98,7 @@ namespace WorldLevel.Models
             ),
             new NPCVariantGroup("EaterOfSoul", 6, -11, -12),
             new NPCVariantGroup("Crimera", 173, -22, -23),
+            new NPCVariantGroup("BloodCrawler", 239, 240),
 
             // ... add other variant groups
         };
@@ -249,9 +250,23 @@ namespace WorldLevel.Models
                 BossType.BrainOfCthulhu
             ),
             ["Snow"] = CreateEnemyGroup(
-                new[] { 218, 52, 161, 431, 150, 147, 185, 184, 167 },
+                new[]
+                {
+                    218,
+                    52,
+                    161,
+                    431,
+                    150,
+                    147,
+                    185,
+                    184,
+                    167,
+                    NPCID.KingSlime,
+                    NPCID.EyeofCthulhu,
+                },
                 BossType.Deerclops
             ),
+
             ["Jungle"] = CreateEnemyGroup(
                 new[]
                 {
@@ -287,6 +302,8 @@ namespace WorldLevel.Models
                     -20,
                     -21,
                     176,
+                    NPCID.EaterofWorldsTail,
+                    NPCID.BrainofCthulhu,
                 },
                 BossType.QueenBee
             ),
@@ -340,6 +357,20 @@ namespace WorldLevel.Models
                 new[] { 39, 62, 24, 60, 59, 66 },
                 BossType.WallOfFlesh
             ),
+            ["Boss1"] = CreateEnemyGroup(
+                new[] { (int)NPCID.KingSlime, NPCID.EyeofCthulhu },
+                BossType.BrainOfCthulhu,
+                BossType.EaterOfWorlds
+            ),
+            ["Boss2"] = CreateEnemyGroup(
+                new[] { (int)NPCID.EaterofWorldsTail, NPCID.BrainofCthulhu },
+                BossType.Deerclops
+            ),
+            ["Boss3"] = CreateEnemyGroup(
+                new[] { (int)NPCID.QueenBee, NPCID.Deerclops },
+                BossType.Skeletron
+            ),
+            ["Boss4"] = CreateEnemyGroup(new[] { (int)NPCID.SkeletronHead }, BossType.WallOfFlesh),
         };
 
         // Hardmode Enemy Groups
@@ -485,6 +516,37 @@ namespace WorldLevel.Models
                     NPCID.StardustSoldier,
                     (int)NPCID.StardustWormHead,
                 },
+                BossType.MoonLord
+            ),
+
+            ["Boss5"] = CreateEnemyGroup(new[] { (int)NPCID.WallofFlesh }, BossType.QueenSlime),
+            ["Boss6"] = CreateEnemyGroup(
+                new[] { (int)NPCID.QueenSlimeBoss },
+                BossType.TheDestroyer,
+                BossType.TheTwins,
+                BossType.SkeletronPrime
+            ),
+            ["Boss7"] = CreateEnemyGroup(
+                new[]
+                {
+                    (int)NPCID.TheDestroyer,
+                    NPCID.SkeletronPrime,
+                    NPCID.Spazmatism,
+                    NPCID.Retinazer,
+                },
+                BossType.Plantera
+            ),
+            ["Boss8"] = CreateEnemyGroup(
+                new[] { (int)NPCID.Plantera },
+                BossType.DukeFishron,
+                BossType.EmpressOfLight
+            ),
+            ["Boss8"] = CreateEnemyGroup(
+                new[] { (int)NPCID.DukeFishron, NPCID.HallowBoss },
+                BossType.Golem
+            ),
+            ["Boss8"] = CreateEnemyGroup(
+                new[] { (int)NPCID.Golem, NPCID.CultistBoss },
                 BossType.MoonLord
             ),
         };
