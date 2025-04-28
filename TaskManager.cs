@@ -158,6 +158,11 @@ namespace WorldLevel
             var rarity = _npcRarityService.GetNPCRarity(npcId);
             var baseRequirement = _npcRarityService.GetRequiredKills(rarity);
 
+            if (rarity == NPCRarity.SuperRare)
+            {
+                // Super rare NPCs have a fixed goal of 1 kill
+                return baseRequirement;
+            }
             // Scale with world level
             return baseRequirement + (_worldData.WorldLevel * GOAL_LEVEL_SCALING);
         }
@@ -203,43 +208,66 @@ namespace WorldLevel
             }
         }
 
-        public async void HandleNpcKill(int npcId, TSPlayer killer, bool canBroadcast = true)
+        private bool IsValidKillForTask(int npcId)
         {
-            if (_worldData.CurrentTask == null || !IsValidKillForTask(npcId))
-                return;
-
-            // Find active NPC instance with null checks and bounds validation
-            NPC npc = null;
-            for (int i = 0; i < Main.npc.Length; i++)
+            if (_worldData.CurrentTask == null)
             {
-                if (Main.npc[i] != null && !Main.npc[i].active && Main.npc[i].netID == npcId)
-                {
-                    npc = Main.npc[i];
-                    break;
-                }
+                TShock.Log.Debug("HandleNpcKill: No active task");
+                return false;
             }
 
-            // Verify this player is the actual killer with bounds checking
-            if (
-                npc != null
-                && npc.lastInteraction >= 0
-                && npc.lastInteraction < TShock.Players.Length
-            )
+            var targetNpcId = _worldData.CurrentTask.TargetMobId;
+
+            // Log the NPC IDs being compared
+            TShock.Log.Debug($"Comparing - Target NPC: {targetNpcId}, Killed NPC: {npcId}");
+
+            // First check: Direct NPC ID match
+            if (targetNpcId == npcId)
             {
-                if (npc.lastInteraction != killer.Index)
+                TShock.Log.Debug($"Direct NPC match: {npcId}");
+                return true;
+            }
+
+            // Second check: Check if both NPCs belong to same variant group
+            var targetGroup = NPCVariants.GetVariantGroup(targetNpcId);
+            var killedGroup = NPCVariants.GetVariantGroup(npcId);
+
+            // Only count if both NPCs have variant groups AND they're the same group
+            if (targetGroup != null && killedGroup != null)
+            {
+                bool isSameGroup = targetGroup.Name == killedGroup.Name;
+                if (isSameGroup)
+                {
+                    TShock.Log.Debug($"Variant group match found: {targetGroup.Name}");
+                    return true;
+                }
+                else
                 {
                     TShock.Log.Debug(
-                        $"Kill credit goes to player index {npc.lastInteraction}, not {killer.Index}"
+                        $"Different variant groups: Target({targetGroup.Name}) vs Killed({killedGroup.Name})"
                     );
-                    var actualKiller = TShock.Players[npc.lastInteraction];
-                    if (actualKiller != null && actualKiller.Active)
-                    {
-                        killer = actualKiller;
-                    }
                 }
             }
 
-            // Track contribution
+            TShock.Log.Debug($"No valid match found for NPC {npcId}");
+            return false;
+        }
+
+        public async void HandleNpcKill(int npcId, TSPlayer killer, bool canBroadcast = true)
+        {
+            if (_worldData.CurrentTask == null || killer?.Account == null)
+                return;
+
+            // Validate kill for task (including variants)
+            if (!IsValidKillForTask(npcId))
+            {
+                TShock.Log.Debug(
+                    $"Kill not valid for task. NPC ID: {npcId}, Task Target: {_worldData.CurrentTask.TargetMobId}"
+                );
+                return;
+            }
+
+            // Initialize or get player's contribution
             if (!_currentTaskContributions.ContainsKey(killer.Account.ID))
             {
                 _currentTaskContributions[killer.Account.ID] = new TaskContribution(
@@ -248,11 +276,11 @@ namespace WorldLevel
                 );
             }
 
-            _currentTaskContributions[killer.Account.ID].Kills++;
+            var contribution = _currentTaskContributions[killer.Account.ID];
+            contribution.Kills++;
             _worldData.CurrentTask.Progress++;
 
-            // Show personal contribution with variant info
-            var contribution = _currentTaskContributions[killer.Account.ID];
+            // Show kill message with variant information
             var variantGroup = NPCVariants.GetVariantGroup(npcId);
             var killMessage =
                 variantGroup != null
@@ -263,7 +291,7 @@ namespace WorldLevel
                 $"{killMessage} ({contribution.Kills * 100.0f / _worldData.CurrentTask.Goal:F1}% of goal)"
             );
 
-            // Batch progress broadcasts
+            // Handle progress broadcasting
             if (canBroadcast)
             {
                 var now = DateTime.UtcNow;
@@ -277,6 +305,7 @@ namespace WorldLevel
                 }
             }
 
+            // Check for task completion
             if (_worldData.CurrentTask.Progress >= _worldData.CurrentTask.Goal)
             {
                 await CompleteTask();
@@ -390,30 +419,6 @@ namespace WorldLevel
                 // Ultimate fallback - basic slime task
                 CreateTask(NPCID.BlueSlime, BossType.KingSlime.ToString(), "Surface");
             }
-        }
-
-        private bool IsValidKillForTask(int npcId)
-        {
-            if (_worldData.CurrentTask == null)
-            {
-                TShock.Log.Debug("HandleNpcKill: No active task");
-                return false;
-            }
-
-            var targetNpcId = _worldData.CurrentTask.TargetMobId;
-
-            // Check if killed NPC is in same variant group as target
-            if (NPCVariants.ShareSameVariantGroup(targetNpcId, npcId))
-            {
-                var group = NPCVariants.GetVariantGroup(targetNpcId);
-                TShock.Log.Debug($"Variant group match found: {group?.Name}");
-                return true;
-            }
-
-            // Fallback to exact match
-            bool isExactMatch = targetNpcId == npcId;
-            TShock.Log.Debug($"Direct ID match: {isExactMatch}");
-            return isExactMatch;
         }
     }
 }
