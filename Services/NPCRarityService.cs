@@ -23,6 +23,8 @@ namespace WorldLevel.Services
                 return NPCRarity.Special;
             if (_config.HostileNPCs.Contains(npcId))
                 return NPCRarity.Hostile;
+            if (_config.SuperRareNPCs.Contains(npcId))
+                return NPCRarity.SuperRare;
             return NPCRarity.Normal;
         }
 
