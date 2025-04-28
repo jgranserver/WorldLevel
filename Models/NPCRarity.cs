@@ -1,4 +1,6 @@
 using System.Collections.Generic;
+using IL.Terraria;
+using Terraria.ID;
 
 namespace WorldLevel.Models
 {
@@ -7,6 +9,7 @@ namespace WorldLevel.Models
         Normal = 0,
         Hostile = 1,
         Special = 2,
+        SuperRare = 3,
     }
 
     public class NPCRarityConfig
@@ -16,15 +19,17 @@ namespace WorldLevel.Models
             {
                 { NPCRarity.Normal, 160 },
                 { NPCRarity.Hostile, 80 },
-                { NPCRarity.Special, 40 },
+                { NPCRarity.Special, 30 },
+                { NPCRarity.SuperRare, 5 },
             };
 
         public Dictionary<NPCRarity, double> XPMultipliers { get; set; } =
             new()
             {
                 { NPCRarity.Normal, 2.5 }, // Base XP
-                { NPCRarity.Hostile, 7.5 }, // 2x XP
-                { NPCRarity.Special, 20.5 }, // 3.5x XP
+                { NPCRarity.Hostile, 8.5 }, // 2x XP
+                { NPCRarity.Special, 23.5 }, // 3.5x XP
+                { NPCRarity.SuperRare, 44.8 },
             };
 
         public HashSet<int> HostileNPCs { get; set; } =
@@ -50,9 +55,6 @@ namespace WorldLevel.Models
                 117,
                 118,
                 119,
-                98,
-                99,
-                100,
                 47,
                 57,
                 168,
@@ -79,8 +81,6 @@ namespace WorldLevel.Models
                 257,
                 69,
                 77,
-                473,
-                474,
                 475,
                 39,
                 40,
@@ -90,7 +90,6 @@ namespace WorldLevel.Models
                 217,
                 94,
                 494,
-                179,
                 467,
                 7,
                 8,
@@ -110,7 +109,6 @@ namespace WorldLevel.Models
                 93,
                 152,
                 111,
-                471,
                 55,
                 48,
                 174,
@@ -157,7 +155,6 @@ namespace WorldLevel.Models
                 145,
                 185,
                 143,
-                184,
                 204,
                 221,
                 405,
@@ -172,16 +169,12 @@ namespace WorldLevel.Models
                 404,
                 292,
                 53,
-                514,
-                513,
-                515,
                 141,
                 546,
                 44,
                 167,
                 86,
                 158,
-                82,
                 161,
                 223,
                 320,
@@ -201,6 +194,7 @@ namespace WorldLevel.Models
         public HashSet<int> SpecialNPCs { get; set; } =
             new()
             {
+                179,
                 14,
                 13,
                 586,
@@ -216,20 +210,16 @@ namespace WorldLevel.Models
                 172,
                 45,
                 85,
-                473,
-                474,
                 475,
                 476,
                 629,
                 196,
                 477,
-                471,
                 216,
                 205,
                 251,
                 109,
                 156,
-                66,
                 153,
                 154,
                 454,
@@ -263,6 +253,43 @@ namespace WorldLevel.Models
                 574,
                 568,
                 572,
+                73,
+                82,
+                513,
+            };
+
+        public HashSet<int> SuperRareNPCs { get; set; } =
+            new()
+            {
+                NPCID.EyeofCthulhu,
+                NPCID.KingSlime,
+                NPCID.EaterofWorldsTail,
+                NPCID.BrainofCthulhu,
+                NPCID.QueenBee,
+                NPCID.Deerclops,
+                NPCID.SkeletronHead,
+                NPCID.WallofFlesh,
+                NPCID.QueenSlimeBoss,
+                NPCID.TheDestroyer,
+                NPCID.SkeletronPrime,
+                NPCID.Spazmatism,
+                NPCID.Retinazer,
+                NPCID.Plantera,
+                NPCID.Golem,
+                NPCID.DukeFishron,
+                NPCID.CultistBoss,
+                NPCID.HallowBoss,
+                NPCID.BigMimicCrimson,
+                NPCID.BigMimicCorruption,
+                NPCID.Gnome,
+                NPCID.GoblinSummoner,
+                NPCID.SandSlime,
+                NPCID.SpikedIceSlime,
+                NPCID.VoodooDemon,
+                NPCID.CursedHammer,
+                NPCID.Shark,
+                NPCID.DevourerHead,
+                99,
             };
 
         public double GetXPMultiplier(int npcId)
@@ -271,6 +298,8 @@ namespace WorldLevel.Models
                 return XPMultipliers[NPCRarity.Special];
             if (HostileNPCs.Contains(npcId))
                 return XPMultipliers[NPCRarity.Hostile];
+            if (SuperRareNPCs.Contains(npcId))
+                return XPMultipliers[NPCRarity.SuperRare];
             return XPMultipliers[NPCRarity.Normal];
         }
     }
