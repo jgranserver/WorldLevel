@@ -90,30 +90,40 @@ namespace WorldLevel
                 var npcId = args.npc.netID;
                 TShock.Log.Debug($"NPC Killed - ID: {npcId}, Name: {Lang.GetNPCNameValue(npcId)}");
 
-                // Check if NPC matches current task
-                if (_worldData.CurrentTask?.TargetMobId == npcId)
+                // Early return if no active task
+                if (_worldData.CurrentTask == null)
+                    return;
+
+                // Get the killer player
+                var player = TShock.Players.FirstOrDefault(p =>
+                    p?.Active == true && p.Index == args.npc.target
+                );
+
+                if (player == null)
                 {
-                    bool canBroadcast =
-                        (DateTime.Now - _lastTaskBroadcast).TotalSeconds
-                        >= BROADCAST_COOLDOWN_SECONDS;
-
-                    var player = TShock.Players.FirstOrDefault(p =>
-                        p?.Active == true && p.Index == args.npc.target
+                    TShock.Log.Debug(
+                        $"No valid player found for kill. Target index: {args.npc.target}"
                     );
-
-                    _taskManager?.HandleNpcKill(npcId, player, canBroadcast);
-
-                    if (canBroadcast)
-                    {
-                        _lastTaskBroadcast = DateTime.Now;
-                    }
-
-                    SaveWorldData();
+                    return;
                 }
+
+                // Check broadcast cooldown
+                bool canBroadcast =
+                    (DateTime.Now - _lastTaskBroadcast).TotalSeconds >= BROADCAST_COOLDOWN_SECONDS;
+
+                // Handle the kill
+                _taskManager?.HandleNpcKill(npcId, player, canBroadcast);
+
+                if (canBroadcast)
+                {
+                    _lastTaskBroadcast = DateTime.Now;
+                }
+
+                SaveWorldData();
             }
             catch (Exception ex)
             {
-                TShock.Log.Error($"Error in OnNPCKill: {ex.Message}");
+                TShock.Log.Error($"Error in OnNPCKill: {ex}");
                 TShock.Log.Error($"Stack trace: {ex.StackTrace}");
             }
         }
