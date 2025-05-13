@@ -197,6 +197,15 @@ namespace WorldLevel
                 "Hallow" => 2.3,
                 "Temple" => 3.0,
                 "Celestial" => 3.2,
+                // Boss progression biomes
+                "Boss1" => 1.5,  // King Slime & Eye of Cthulhu
+                "Boss2" => 1.8,  // EoW/BoC
+                "Boss3" => 2.0,  // Queen Bee & Deerclops
+                "Boss4" => 2.2,  // Skeletron
+                "Boss5" => 2.4,  // Wall of Flesh
+                "Boss6" => 2.6,  // Queen Slime
+                "Boss7" => 2.8,  // Mechanical Bosses
+                "Boss8" => 3.0,  // Late game bosses
                 _ => 1.0, // Default/fallback value
             };
 
