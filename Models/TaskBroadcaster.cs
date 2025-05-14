@@ -101,13 +101,13 @@ namespace WorldLevel.Models
                 "Ocean" => "deep ocean",
                 "Space" => "outer space",
                 // Boss progression biomes
-                "Boss1" => "Pre-Eye territories",         // King Slime & Eye of Cthulhu
-                "Boss2" => "Evil biome depths",           // EoW/BoC
-                "Boss3" => "Queen's domain",              // Queen Bee & Deerclops
-                "Boss4" => "Dungeon outskirts",           // Skeletron
-                "Boss5" => "Underworld border",           // Wall of Flesh
-                "Boss6" => "Early hardmode realm",        // Queen Slime
-                "Boss7" => "Mechanical wasteland",        // Mechanical Bosses
+                "Boss1" => "Pre-Eye territories", // King Slime & Eye of Cthulhu
+                "Boss2" => "Evil biome depths", // EoW/BoC
+                "Boss3" => "Queen's domain", // Queen Bee & Deerclops
+                "Boss4" => "Dungeon outskirts", // Skeletron
+                "Boss5" => "Underworld border", // Wall of Flesh
+                "Boss6" => "Early hardmode realm", // Queen Slime
+                "Boss7" => "Mechanical wasteland", // Mechanical Bosses
                 "Boss8" => "Post-mechanical territories", // Late game bosses
                 _ => biome,
             };
