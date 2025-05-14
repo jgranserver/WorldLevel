@@ -8,6 +8,7 @@ using Terraria.ID;
 using TerrariaApi.Server;
 using TShockAPI;
 using WorldLevel.Models;
+using WorldLevel.Services;
 
 namespace WorldLevel
 {
@@ -20,6 +21,10 @@ namespace WorldLevel
         private string SavePath => Path.Combine(TShock.SavePath, "worldlevel.json");
         private DateTime _lastTaskBroadcast = DateTime.MinValue;
         private const int BROADCAST_COOLDOWN_SECONDS = 300;
+        private const int REROLL_COST = 50000; // Cost in jspoints
+        private const int REROLL_COOLDOWN_MINUTES = 5;
+        private const int DAILY_REROLL_LIMIT = 10; // Maximum rerolls per day
+        private readonly BankService _bankService;
 
         public override string Name => "World Level";
         public override Version Version => new Version(1, 1, 0);
@@ -30,6 +35,7 @@ namespace WorldLevel
             : base(game)
         {
             _worldData = new WorldData();
+            _bankService = new BankService();
         }
 
         public override void Initialize()
@@ -261,6 +267,9 @@ namespace WorldLevel
                                 "You don't have permission to use admin commands!"
                             );
                         return;
+                    case "reroll":
+                        HandleTaskReroll(player);
+                        return;
                     default:
                         player.SendErrorMessage(
                             "Unknown command. Use /worldlevel help for commands."
@@ -279,6 +288,10 @@ namespace WorldLevel
             player.SendMessage("║ /worldlevel - Show current status", Color.White);
             player.SendMessage("║ /wl status - Show detailed progress", Color.White);
             player.SendMessage("║ /wl task - Show current task details", Color.White);
+            player.SendMessage(
+                "║ /wl reroll - Reroll current task (50000 jspoints, 10/day)",
+                Color.White
+            );
 
             if (player.HasPermission("worldlevel.admin"))
             {
@@ -456,6 +469,79 @@ namespace WorldLevel
             }
 
             SaveWorldData();
+        }
+
+        private async void HandleTaskReroll(TSPlayer player)
+        {
+            if (_worldData.CurrentTask == null)
+            {
+                player.SendErrorMessage("There is no active task to reroll!");
+                return;
+            }
+
+            var playerData = GetOrCreatePlayerRerollData(player.Account.ID);
+
+            // Check cooldown
+            if (!playerData.CanReroll(REROLL_COOLDOWN_MINUTES))
+            {
+                var timeLeft =
+                    REROLL_COOLDOWN_MINUTES
+                    - (int)(DateTime.Now - playerData.LastRerollTime).TotalMinutes;
+                player.SendErrorMessage(
+                    $"You must wait {timeLeft} more minutes before rerolling again."
+                );
+                return;
+            }
+
+            // Check daily limit
+            if (playerData.DailyRerollCount >= DAILY_REROLL_LIMIT)
+            {
+                player.SendErrorMessage(
+                    $"You've reached your daily limit of {DAILY_REROLL_LIMIT} rerolls!"
+                );
+                player.SendErrorMessage("The limit resets at midnight UTC.");
+                return;
+            }
+
+            // Process payment
+            var success = await _bankService.UpdateBalance(player, -REROLL_COST, "task reroll");
+
+            if (success)
+            {
+                _worldData.CurrentTask = null;
+                _taskManager?.Update();
+
+                playerData.UpdateReroll();
+                var remainingRerolls = DAILY_REROLL_LIMIT - playerData.DailyRerollCount;
+
+                player.SendSuccessMessage(
+                    $"Task rerolled! {REROLL_COST} jspoints have been deducted."
+                );
+                player.SendMessage(
+                    $"You have {remainingRerolls} rerolls remaining today.",
+                    Color.Yellow
+                );
+                SaveWorldData();
+            }
+            else
+            {
+                player.SendErrorMessage($"You need {REROLL_COST} jspoints to reroll the task!");
+            }
+        }
+
+        private PlayerRerollData GetOrCreatePlayerRerollData(int accountId)
+        {
+            if (!_worldData.PlayerRerolls.TryGetValue(accountId, out var data))
+            {
+                data = new PlayerRerollData
+                {
+                    LastRerollTime = DateTime.MinValue,
+                    LastResetTime = DateTime.UtcNow,
+                    DailyRerollCount = 0,
+                };
+                _worldData.PlayerRerolls[accountId] = data;
+            }
+            return data;
         }
 
         protected override void Dispose(bool disposing)
