@@ -27,7 +27,7 @@ namespace WorldLevel
         private readonly BankService _bankService;
 
         public override string Name => "World Level";
-        public override Version Version => new Version(1, 1, 0);
+        public override Version Version => new Version(1, 1, 1);
         public override string Author => "jgranserver";
         public override string Description => "A world leveling system with tasks and boss unlocks";
 
