@@ -11,6 +11,7 @@ namespace WorldLevel.Models
         public ActiveTask? CurrentTask { get; set; }
         public DateTime? LastBossUnlock { get; set; }
         public List<int> UnlockedBosses { get; set; } = new();
+        public DateTime NextRerollReset { get; set; } = DateTime.UtcNow.Date.AddDays(1);
         public Dictionary<int, PlayerRerollData> PlayerRerolls { get; set; } = new();
 
         public void SetRequiredXP(int xp)
@@ -22,8 +23,7 @@ namespace WorldLevel.Models
     public class PlayerRerollData
     {
         public DateTime LastRerollTime { get; set; }
-        public int DailyRerollCount { get; set; }
-        public DateTime LastResetTime { get; set; }
+        public int RerollsUsed { get; set; }
 
         public bool CanReroll(int cooldownMinutes)
         {
@@ -32,16 +32,15 @@ namespace WorldLevel.Models
 
         public void UpdateReroll()
         {
-            if (DateTime.UtcNow.Date > LastResetTime.Date)
+            if (DateTime.UtcNow.Date > LastRerollTime.Date)
             {
-                DailyRerollCount = 1;
-                LastResetTime = DateTime.UtcNow;
+                RerollsUsed = 1;
+                LastRerollTime = DateTime.UtcNow;
             }
             else
             {
-                DailyRerollCount++;
+                RerollsUsed++;
             }
-            LastRerollTime = DateTime.Now;
         }
     }
 
