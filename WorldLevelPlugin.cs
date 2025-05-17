@@ -27,7 +27,7 @@ namespace WorldLevel
         private readonly BankService _bankService;
 
         public override string Name => "World Level";
-        public override Version Version => new Version(1, 1, 1);
+        public override Version Version => new Version(1, 1, 2);
         public override string Author => "jgranserver";
         public override string Description => "A world leveling system with tasks and boss unlocks";
 
@@ -84,6 +84,7 @@ namespace WorldLevel
         private void OnGameUpdate(EventArgs args)
         {
             _taskManager?.Update();
+            CheckAndResetRerolls(); // Add reset check to update loop
         }
 
         private void OnNPCKill(NpcKilledEventArgs args)
@@ -471,6 +472,31 @@ namespace WorldLevel
             SaveWorldData();
         }
 
+        private void CheckAndResetRerolls()
+        {
+            if (DateTime.UtcNow >= _worldData.NextRerollReset)
+            {
+                // Clear all reroll data and set next reset time
+                _worldData.PlayerRerolls.Clear();
+                _worldData.NextRerollReset = DateTime.UtcNow.Date.AddDays(1);
+                SaveWorldData();
+                TShock.Log.Debug($"Daily reroll attempts reset at {DateTime.UtcNow}");
+
+                // Broadcast reset to all players
+                TShock.Utils.Broadcast("Daily task reroll attempts have been reset!", Color.Yellow);
+            }
+        }
+
+        private PlayerRerollData GetOrCreatePlayerRerollData(int accountId)
+        {
+            if (!_worldData.PlayerRerolls.TryGetValue(accountId, out var data))
+            {
+                data = new PlayerRerollData { LastRerollTime = DateTime.MinValue, RerollsUsed = 0 };
+                _worldData.PlayerRerolls[accountId] = data;
+            }
+            return data;
+        }
+
         private async void HandleTaskReroll(TSPlayer player)
         {
             if (_worldData.CurrentTask == null)
@@ -482,7 +508,7 @@ namespace WorldLevel
             var playerData = GetOrCreatePlayerRerollData(player.Account.ID);
 
             // Check cooldown
-            if (!playerData.CanReroll(REROLL_COOLDOWN_MINUTES))
+            if ((DateTime.Now - playerData.LastRerollTime).TotalMinutes < REROLL_COOLDOWN_MINUTES)
             {
                 var timeLeft =
                     REROLL_COOLDOWN_MINUTES
@@ -494,12 +520,15 @@ namespace WorldLevel
             }
 
             // Check daily limit
-            if (playerData.DailyRerollCount >= DAILY_REROLL_LIMIT)
+            if (playerData.RerollsUsed >= DAILY_REROLL_LIMIT)
             {
+                var timeUntilReset = _worldData.NextRerollReset - DateTime.UtcNow;
                 player.SendErrorMessage(
                     $"You've reached your daily limit of {DAILY_REROLL_LIMIT} rerolls!"
                 );
-                player.SendErrorMessage("The limit resets at midnight UTC.");
+                player.SendErrorMessage(
+                    $"Resets in: {timeUntilReset.Hours}h {timeUntilReset.Minutes}m"
+                );
                 return;
             }
 
@@ -511,9 +540,10 @@ namespace WorldLevel
                 _worldData.CurrentTask = null;
                 _taskManager?.Update();
 
-                playerData.UpdateReroll();
-                var remainingRerolls = DAILY_REROLL_LIMIT - playerData.DailyRerollCount;
+                playerData.LastRerollTime = DateTime.Now;
+                playerData.RerollsUsed++;
 
+                var remainingRerolls = DAILY_REROLL_LIMIT - playerData.RerollsUsed;
                 player.SendSuccessMessage(
                     $"Task rerolled! {REROLL_COST} jspoints have been deducted."
                 );
@@ -527,21 +557,6 @@ namespace WorldLevel
             {
                 player.SendErrorMessage($"You need {REROLL_COST} jspoints to reroll the task!");
             }
-        }
-
-        private PlayerRerollData GetOrCreatePlayerRerollData(int accountId)
-        {
-            if (!_worldData.PlayerRerolls.TryGetValue(accountId, out var data))
-            {
-                data = new PlayerRerollData
-                {
-                    LastRerollTime = DateTime.MinValue,
-                    LastResetTime = DateTime.UtcNow,
-                    DailyRerollCount = 0,
-                };
-                _worldData.PlayerRerolls[accountId] = data;
-            }
-            return data;
         }
 
         protected override void Dispose(bool disposing)
