@@ -62,23 +62,66 @@ namespace WorldLevel
                 {
                     var json = File.ReadAllText(SavePath);
                     _worldData = JsonSerializer.Deserialize<WorldData>(json) ?? new WorldData();
+
+                    // Update or initialize NextRerollReset if needed
+                    if (_worldData.NextRerollReset == default)
+                    {
+                        _worldData.NextRerollReset = DateTime.UtcNow.Date.AddDays(1);
+                    }
+
+                    // Migrate or clean up old reroll data if needed
+                    if (_worldData.PlayerRerolls == null)
+                    {
+                        _worldData.PlayerRerolls = new Dictionary<int, PlayerRerollData>();
+                    }
+                    else
+                    {
+                        // Clean up expired reroll data
+                        var currentDate = DateTime.UtcNow.Date;
+                        if (currentDate >= _worldData.NextRerollReset)
+                        {
+                            _worldData.PlayerRerolls.Clear();
+                            _worldData.NextRerollReset = currentDate.AddDays(1);
+                            TShock.Log.Info("Cleaned up expired reroll data during load");
+                        }
+                    }
+
+                    SaveWorldData(); // Save any updates made during loading
                 }
                 else
                 {
-                    _worldData = new WorldData();
+                    _worldData = new WorldData
+                    {
+                        NextRerollReset = DateTime.UtcNow.Date.AddDays(1),
+                        PlayerRerolls = new Dictionary<int, PlayerRerollData>(),
+                    };
                     SaveWorldData(); // Create initial file
                 }
             }
             catch (Exception ex)
             {
                 TShock.Log.Error($"Failed to load world data: {ex.Message}");
-                _worldData = new WorldData();
+                _worldData = new WorldData
+                {
+                    NextRerollReset = DateTime.UtcNow.Date.AddDays(1),
+                    PlayerRerolls = new Dictionary<int, PlayerRerollData>(),
+                };
             }
         }
 
         private void SaveWorldData()
         {
-            File.WriteAllText(SavePath, JsonSerializer.Serialize(_worldData));
+            try
+            {
+                var options = new JsonSerializerOptions { WriteIndented = true };
+                string json = JsonSerializer.Serialize(_worldData, options);
+                File.WriteAllText(SavePath, json);
+                TShock.Log.Debug("World data saved successfully");
+            }
+            catch (Exception ex)
+            {
+                TShock.Log.Error($"Failed to save world data: {ex.Message}");
+            }
         }
 
         private void OnGameUpdate(EventArgs args)
