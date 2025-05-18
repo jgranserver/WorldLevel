@@ -580,6 +580,10 @@ namespace WorldLevel
 
             if (success)
             {
+                // Store the current NPC ID before clearing the task
+                var oldNpcId = _worldData.CurrentTask.TargetMobId;
+                _worldData.AddRecentTask(oldNpcId); // Add to recent tasks list
+
                 _worldData.CurrentTask = null;
                 _taskManager?.Update();
 
