@@ -13,10 +13,18 @@ namespace WorldLevel.Models
         public List<int> UnlockedBosses { get; set; } = new();
         public DateTime NextRerollReset { get; set; } = DateTime.UtcNow.Date.AddDays(1);
         public Dictionary<int, PlayerRerollData> PlayerRerolls { get; set; } = new();
+        public Queue<int> RecentTaskNPCs { get; set; } = new Queue<int>(5); // Tracks last 5 tasks
 
         public void SetRequiredXP(int xp)
         {
             RequiredXP = xp;
+        }
+
+        public void AddRecentTask(int npcId)
+        {
+            if (RecentTaskNPCs.Count >= 5)
+                RecentTaskNPCs.Dequeue();
+            RecentTaskNPCs.Enqueue(npcId);
         }
     }
 
