@@ -100,16 +100,48 @@ namespace WorldLevel
                     )
                     .ToList();
 
+                // Filter out recently used NPCs
+                availableGroups = availableGroups
+                    .Where(g =>
+                        g.Value.NpcIds.Any(npcId => !_worldData.RecentTaskNPCs.Contains(npcId))
+                    )
+                    .ToList();
+
                 if (!availableGroups.Any())
                 {
-                    TShock.Log.Debug($"No enemy groups available for current progression");
-                    CreateFallbackTask();
-                    return;
+                    TShock.Log.Debug("No non-repeated groups available, clearing recent tasks");
+                    _worldData.RecentTaskNPCs.Clear();
+                    // Rerun the original filter
+                    availableGroups = enemies
+                        .Where(g =>
+                            g.Value.Bosses.Any(b =>
+                                nextBosses.Any(nb => nb.Key == b && nb.Value == nextLevel)
+                                || (
+                                    TaskDefinitions.BossLevelRequirements.TryGetValue(
+                                        b,
+                                        out int reqLevel
+                                    )
+                                    && reqLevel <= _worldData.WorldLevel
+                                )
+                            )
+                        )
+                        .ToList();
                 }
 
                 // Select random group and create task
                 var randomGroup = availableGroups[_random.Next(availableGroups.Count)];
-                var availableNpcs = randomGroup.Value.NpcIds;
+
+                // Filter out recent NPCs from the selected group
+                var availableNpcs = randomGroup
+                    .Value.NpcIds.Where(npcId => !_worldData.RecentTaskNPCs.Contains(npcId))
+                    .ToArray();
+
+                if (!availableNpcs.Any())
+                {
+                    availableNpcs = randomGroup.Value.NpcIds;
+                    TShock.Log.Debug("No non-repeated NPCs in group, using all NPCs");
+                }
+
                 var randomNpcId = availableNpcs[_random.Next(availableNpcs.Length)];
 
                 // Get all bosses at the next level from this group
@@ -126,6 +158,9 @@ namespace WorldLevel
                 TShock.Log.Debug(
                     $"Creating task with NPC {randomNpcId} from group {randomGroup.Key} for boss(es) {bossName}"
                 );
+                // Add the chosen NPC to recent tasks
+                _worldData.AddRecentTask(randomNpcId);
+
                 CreateTask(randomNpcId, bossName, randomGroup.Key);
             }
             catch (Exception ex)
@@ -198,14 +233,14 @@ namespace WorldLevel
                 "Temple" => 3.0,
                 "Celestial" => 3.2,
                 // Boss progression biomes
-                "Boss1" => 1.5,  // King Slime & Eye of Cthulhu
-                "Boss2" => 1.8,  // EoW/BoC
-                "Boss3" => 2.0,  // Queen Bee & Deerclops
-                "Boss4" => 2.2,  // Skeletron
-                "Boss5" => 2.4,  // Wall of Flesh
-                "Boss6" => 2.6,  // Queen Slime
-                "Boss7" => 2.8,  // Mechanical Bosses
-                "Boss8" => 3.0,  // Late game bosses
+                "Boss1" => 5.5, // King Slime & Eye of Cthulhu
+                "Boss2" => 5.8, // EoW/BoC
+                "Boss3" => 6.0, // Queen Bee & Deerclops
+                "Boss4" => 6.2, // Skeletron
+                "Boss5" => 6.4, // Wall of Flesh
+                "Boss6" => 6.6, // Queen Slime
+                "Boss7" => 6.8, // Mechanical Bosses
+                "Boss8" => 7.0, // Late game bosses
                 _ => 1.0, // Default/fallback value
             };
 
