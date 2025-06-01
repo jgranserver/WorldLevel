@@ -62,47 +62,32 @@ namespace WorldLevel
                 {
                     var json = File.ReadAllText(SavePath);
                     _worldData = JsonSerializer.Deserialize<WorldData>(json) ?? new WorldData();
-
-                    // Update or initialize NextRerollReset if needed
-                    if (_worldData.NextRerollReset == default)
-                    {
-                        _worldData.NextRerollReset = DateTime.UtcNow.Date.AddDays(1);
-                    }
-
-                    // Migrate or clean up old reroll data if needed
-                    if (_worldData.PlayerRerolls == null)
-                    {
-                        _worldData.PlayerRerolls = new Dictionary<int, PlayerRerollData>();
-                    }
-                    else
-                    {
-                        // Clean up expired reroll data
-                        var currentDate = DateTime.UtcNow.Date;
-                        if (currentDate >= _worldData.NextRerollReset)
-                        {
-                            _worldData.PlayerRerolls.Clear();
-                            _worldData.NextRerollReset = currentDate.AddDays(1);
-                            TShock.Log.Info("Cleaned up expired reroll data during load");
-                        }
-                    }
-
-                    SaveWorldData(); // Save any updates made during loading
                 }
                 else
                 {
                     _worldData = new WorldData
                     {
+                        WorldLevel = 1, // Start at level 1 instead of 0
                         NextRerollReset = DateTime.UtcNow.Date.AddDays(1),
                         PlayerRerolls = new Dictionary<int, PlayerRerollData>(),
                     };
-                    SaveWorldData(); // Create initial file
                 }
+
+                // Ensure minimum world level
+                if (_worldData.WorldLevel < 1)
+                {
+                    _worldData.WorldLevel = 1;
+                    TShock.Log.Info("World level initialized to 1");
+                }
+
+                SaveWorldData(); // Save any updates
             }
             catch (Exception ex)
             {
                 TShock.Log.Error($"Failed to load world data: {ex.Message}");
                 _worldData = new WorldData
                 {
+                    WorldLevel = 1, // Ensure minimum level even on error
                     NextRerollReset = DateTime.UtcNow.Date.AddDays(1),
                     PlayerRerolls = new Dictionary<int, PlayerRerollData>(),
                 };
