@@ -15,24 +15,38 @@ namespace WorldLevel.Models
             var npcName = Lang.GetNPCNameValue(task.TargetMobId);
             var location = GetBiomeDescription(biome);
 
+            // Get task descriptions from current task group
+            var taskGroup = TaskDefinitions
+                .BossTasks.FirstOrDefault(bt => bt.Task.RequiredLevel == worldData.WorldLevel)
+                .Task;
+            if (taskGroup == null)
+            {
+                taskGroup = new TaskGroup(0, "New Task Available!", "Hunt", 0);
+            }
+
             // Find next boss to unlock
             var nextBoss = TaskDefinitions
                 .BossLevelRequirements.Where(b => b.Value > worldData.WorldLevel)
                 .OrderBy(b => b.Value)
                 .FirstOrDefault();
 
-            // Main task announcement
+            // Main task announcement with description
+            TSPlayer.All.SendMessage("=================================", Color.Gold);
             TSPlayer.All.SendMessage(
-                $"[World Level {worldData.WorldLevel}] New Task Available!",
+                $"[World Level {worldData.WorldLevel}] {taskGroup?.Description ?? "New Task Available!"}",
                 Color.LightGreen
             );
 
-            // Task details
-            TSPlayer.All.SendMessage($"Hunt {task.Goal} {npcName} in the {location}", Color.White);
+            // Task details with minion description
+            TSPlayer.All.SendMessage(
+                $"{taskGroup?.MinionDescription ?? "Hunt"}: {task.Goal} {npcName}",
+                Color.White
+            );
+            TSPlayer.All.SendMessage($"Location: {location}", Color.LightCyan);
 
             // Progress and reward
             TSPlayer.All.SendMessage(
-                $"Progress: 0/{task.Goal} - Reward: {task.RewardXP} XP",
+                $"Progress: 0/{task.Goal} - Reward: {task.RewardXP:N0} XP",
                 Color.Yellow
             );
 
@@ -44,6 +58,7 @@ namespace WorldLevel.Models
                     Color.LightBlue
                 );
             }
+            TSPlayer.All.SendMessage("=================================", Color.Gold);
         }
 
         public static void BroadcastProgress(ActiveTask task, WorldData worldData)
@@ -101,11 +116,11 @@ namespace WorldLevel.Models
                 "Ocean" => "deep ocean",
                 "Space" => "outer space",
                 // Boss progression biomes
-                "Boss1" => "Pre-Eye territories", // King Slime & Eye of Cthulhu
-                "Boss2" => "Evil biome depths", // EoW/BoC
-                "Boss3" => "Queen's domain", // Queen Bee & Deerclops
-                "Boss4" => "Dungeon outskirts", // Skeletron
-                "Boss5" => "Underworld border", // Wall of Flesh
+                "Boss1" => "Pre-Eye Territories", // King Slime & Eye of Cthulhu
+                "Boss2" => "Evil Biome Depths", // EoW/BoC
+                "Boss3" => "Queen's Domain and the Blizzards of Tundra", // Queen Bee & Deerclops
+                "Boss4" => "Dungeon Outskirts", // Skeletron
+                "Boss5" => "Underworld Border", // Wall of Flesh
                 "Boss6" => "Early hardmode realm", // Queen Slime
                 "Boss7" => "Mechanical wasteland", // Mechanical Bosses
                 "Boss8" => "Post-mechanical territories", // Late game bosses
