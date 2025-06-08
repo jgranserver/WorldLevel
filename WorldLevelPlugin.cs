@@ -48,6 +48,7 @@ namespace WorldLevel
             ServerApi.Hooks.GameUpdate.Register(this, OnGameUpdate);
             ServerApi.Hooks.NpcKilled.Register(this, OnNPCKill);
             ServerApi.Hooks.NetGetData.Register(this, OnGetData);
+            ServerApi.Hooks.NpcSpawn.Register(this, OnNPCSpawn);
 
             // Register commands
             Commands.ChatCommands.Add(new Command("worldlevel", WorldLevelCmd, "worldlevel", "wl"));
@@ -591,6 +592,35 @@ namespace WorldLevel
             }
         }
 
+        private void OnNPCSpawn(NpcSpawnEventArgs args)
+        {
+            var npc = Main.npc[args.NpcId]; // Access the NPC using the NpcId property
+            if (NPCIdentifier.IsBossNPC(npc.netID))
+            {
+                var bossType = NPCIdentifier
+                    .BossNPCIDs.FirstOrDefault(x => x.Value == npc.netID)
+                    .Key;
+
+                if (_bossControl != null && !_bossControl.CanSpawnBoss(bossType))
+                {
+                    // Despawn the boss
+                    npc.active = false;
+                    npc.life = 0;
+                    NetMessage.SendData(MessageID.SyncNPC, -1, -1, null, npc.whoAmI);
+
+                    var requiredLevel = TaskDefinitions.BossLevelRequirements[bossType];
+                    TShock.Utils.Broadcast(
+                        $"Cannot spawn {Lang.GetNPCNameValue(npc.netID)} - Requires World Level {requiredLevel}!",
+                        Color.Red
+                    );
+
+                    TShock.Log.Debug(
+                        $"Forcefully despawned {bossType} - Required level: {requiredLevel}, Current level: {_worldData.WorldLevel}"
+                    );
+                }
+            }
+        }
+
         protected override void Dispose(bool disposing)
         {
             if (disposing)
@@ -601,6 +631,7 @@ namespace WorldLevel
                 ServerApi.Hooks.GameUpdate.Deregister(this, OnGameUpdate);
                 ServerApi.Hooks.NpcKilled.Deregister(this, OnNPCKill);
                 ServerApi.Hooks.NetGetData.Deregister(this, OnGetData);
+                ServerApi.Hooks.NpcSpawn.Deregister(this, OnNPCSpawn);
             }
             base.Dispose(disposing);
         }
