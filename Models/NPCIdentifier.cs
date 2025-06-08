@@ -571,5 +571,10 @@ namespace WorldLevel.Models
 
         public static bool IsVariantOf(int npcId, string variantType) =>
             NPCVariants.GetVariantGroup(npcId)?.Name == variantType;
+
+        internal static bool IsBoss(int netID, out BossType bossType)
+        {
+            throw new NotImplementedException();
+        }
     }
 }
