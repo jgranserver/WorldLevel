@@ -38,11 +38,7 @@ namespace WorldLevel.Models
             );
 
             // Task details with minion description
-            TSPlayer.All.SendMessage(
-                $"{taskGroup?.MinionDescription ?? "Hunt"}: {task.Goal} {npcName}",
-                Color.White
-            );
-            TSPlayer.All.SendMessage($"Location: {location}", Color.LightCyan);
+            TSPlayer.All.SendMessage($"{location ?? "Hunt"}: {task.Goal} {npcName}", Color.White);
 
             // Progress and reward
             TSPlayer.All.SendMessage(
