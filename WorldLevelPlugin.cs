@@ -318,10 +318,9 @@ namespace WorldLevel
             player.SendMessage("║ /worldlevel - Show current status", Color.White);
             player.SendMessage("║ /wl status - Show detailed progress", Color.White);
             player.SendMessage("║ /wl task - Show current task details", Color.White);
-            player.SendMessage(
-                "║ /wl reroll - Reroll current task (50000 jspoints, 10/day)",
-                Color.White
-            );
+            player.SendMessage("║ /wl reroll - Reroll current task", Color.White);
+            player.SendMessage("║     Cost: Free (VIP) or 50000 jspoints", Color.Gray);
+            player.SendMessage("║     Limit: 10 rerolls per day", Color.Gray);
 
             if (player.HasPermission("worldlevel.admin"))
             {
@@ -561,14 +560,19 @@ namespace WorldLevel
                 return;
             }
 
-            // Process payment
-            var success = await _bankService.UpdateBalance(player, -REROLL_COST, "task reroll");
+            bool isVIP = player.HasPermission("worldlevel.vip");
+            bool success = true;
+
+            // Only charge non-VIP players
+            if (!isVIP)
+            {
+                success = await _bankService.UpdateBalance(player, -REROLL_COST, "task reroll");
+            }
 
             if (success)
             {
-                // Store the current NPC ID before clearing the task
                 var oldNpcId = _worldData.CurrentTask.TargetMobId;
-                _worldData.AddRecentTask(oldNpcId); // Add to recent tasks list
+                _worldData.AddRecentTask(oldNpcId);
 
                 _worldData.CurrentTask = null;
                 _taskManager?.Update();
@@ -577,9 +581,16 @@ namespace WorldLevel
                 playerData.RerollsUsed++;
 
                 var remainingRerolls = DAILY_REROLL_LIMIT - playerData.RerollsUsed;
-                player.SendSuccessMessage(
-                    $"Task rerolled! {REROLL_COST} jspoints have been deducted."
-                );
+                if (isVIP)
+                {
+                    player.SendSuccessMessage("Task rerolled! (VIP Free Reroll)");
+                }
+                else
+                {
+                    player.SendSuccessMessage(
+                        $"Task rerolled! {REROLL_COST} jspoints have been deducted."
+                    );
+                }
                 player.SendMessage(
                     $"You have {remainingRerolls} rerolls remaining today.",
                     Color.Yellow
