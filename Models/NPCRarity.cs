@@ -14,13 +14,29 @@ namespace WorldLevel.Models
 
     public class NPCRarityConfig
     {
+        public Dictionary<NPCRarity, int> RequiredKillsMin { get; set; } = new()
+        {
+            { NPCRarity.Normal, 80 },
+            { NPCRarity.Hostile, 30 },
+            { NPCRarity.Special, 15 },
+            { NPCRarity.SuperRare, 3 },
+        };
+
+        public Dictionary<NPCRarity, int> RequiredKillsMax { get; set; } = new()
+        {
+            { NPCRarity.Normal, 160 },
+            { NPCRarity.Hostile, 80 },
+            { NPCRarity.Special, 30 },
+            { NPCRarity.SuperRare, 5 },
+        };
+
         public Dictionary<NPCRarity, int> RequiredKills { get; set; } =
             new()
             {
-                { NPCRarity.Normal, 160 },
-                { NPCRarity.Hostile, 80 },
-                { NPCRarity.Special, 30 },
-                { NPCRarity.SuperRare, 5 },
+                { NPCRarity.Normal, 120 },
+                { NPCRarity.Hostile, 55 },
+                { NPCRarity.Special, 22 },
+                { NPCRarity.SuperRare, 4 },
             };
 
         public Dictionary<NPCRarity, double> XPMultipliers { get; set; } =
