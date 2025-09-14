@@ -346,8 +346,15 @@ namespace WorldLevel
                 var requiredXP = _worldData.RequiredXP.ToString("N0");
                 var remainingXP = (_worldData.RequiredXP - _worldData.CurrentXP).ToString("N0");
 
+                // Get current bosses for this level using NPCIdentifier
+                var bosses = NPCIdentifier.BossNPCIDs
+                    .Where(kvp => TaskDefinitions.BossLevelRequirements.TryGetValue(kvp.Key, out int lvl) && lvl == _worldData.WorldLevel)
+                    .Select(kvp => Lang.GetNPCNameValue(kvp.Value))
+                    .ToList();
+                var bossesText = bosses.Count > 0 ? string.Join(", ", bosses) : "None";
+
                 player.SendMessage("╔══════ World Status ══════╗", Color.Gold);
-                player.SendMessage($"║ Level: {_worldData.WorldLevel}", Color.LightGreen);
+                player.SendMessage($"║ Level: {_worldData.WorldLevel} ({bossesText})", Color.LightGreen);
                 player.SendMessage($"║ XP: {currentXP}/{requiredXP}", Color.Yellow);
                 player.SendMessage($"║ Progress: {progressPercent}%", Color.Orange);
                 player.SendMessage($"║ Remaining: {remainingXP} XP", Color.LightBlue);
