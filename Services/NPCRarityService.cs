@@ -30,7 +30,10 @@ namespace WorldLevel.Services
 
         public int GetRequiredKills(NPCRarity rarity)
         {
-            return _config.RequiredKills.TryGetValue(rarity, out int kills) ? kills : 100;
+            int min = _config.RequiredKillsMin.TryGetValue(rarity, out int minVal) ? minVal : 1;
+            int max = _config.RequiredKillsMax.TryGetValue(rarity, out int maxVal) ? maxVal : 100;
+            var rand = new System.Random();
+            return rand.Next(min, max + 1);
         }
 
         public double GetXPMultiplier(int npcId)
