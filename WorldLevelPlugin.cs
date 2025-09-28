@@ -20,6 +20,7 @@ namespace WorldLevel
         private BossControl? _bossControl = null;
         private string SavePath => Path.Combine(TShock.SavePath, "worldlevel.json");
         private DateTime _lastTaskBroadcast = DateTime.MinValue;
+        private DateTime _lastXPTick = DateTime.UtcNow;
         private const int BROADCAST_COOLDOWN_SECONDS = 300;
         private const int REROLL_COST = 50000; // Cost in jspoints
         private const int REROLL_COOLDOWN_MINUTES = 5;
@@ -114,6 +115,14 @@ namespace WorldLevel
         {
             _taskManager?.Update();
             CheckAndResetRerolls(); // Add reset check to update loop
+
+            // Add 1 XP every minute
+            if ((DateTime.UtcNow - _lastXPTick).TotalMinutes >= 1)
+            {
+                _worldData.CurrentXP += 1;
+                _lastXPTick = DateTime.UtcNow;
+                SaveWorldData();
+            }
         }
 
         private void OnNPCKill(NpcKilledEventArgs args)
