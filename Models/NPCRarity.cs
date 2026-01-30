@@ -1,5 +1,4 @@
 using System.Collections.Generic;
-using IL.Terraria;
 using Terraria.ID;
 
 namespace WorldLevel.Models
