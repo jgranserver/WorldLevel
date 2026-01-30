@@ -129,7 +129,7 @@ namespace WorldLevel
         {
             try
             {
-                if (args.npc?.active != true || args.npc.friendly || args.npc.townNPC)
+                if (args.npc == null || !args.npc.active || args.npc.friendly || args.npc.townNPC)
                     return;
 
                 var npcId = args.npc.netID;
@@ -631,8 +631,7 @@ namespace WorldLevel
                 if (_bossControl != null && !_bossControl.CanSpawnBoss(bossType))
                 {
                     // Despawn the boss
-                    npc.active = false;
-                    npc.life = 0;
+                    TSPlayer.Server.StrikeNPC(npc.whoAmI, 99999, 0f, 0);
                     NetMessage.SendData(MessageID.SyncNPC, -1, -1, null, npc.whoAmI);
 
                     var requiredLevel = TaskDefinitions.BossLevelRequirements[bossType];
