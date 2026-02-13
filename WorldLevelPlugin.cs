@@ -28,7 +28,7 @@ namespace WorldLevel
         private readonly BankService _bankService;
 
         public override string Name => "World Level";
-        public override Version Version => new Version(1, 1, 3);
+        public override Version Version => new Version(1, 1, 4);
         public override string Author => "jgranserver";
         public override string Description => "A world leveling system with tasks and boss unlocks";
 
@@ -129,7 +129,7 @@ namespace WorldLevel
         {
             try
             {
-                if (args.npc == null || !args.npc.active || args.npc.friendly || args.npc.townNPC)
+                if (args.npc == null || args.npc.friendly || args.npc.townNPC)
                     return;
 
                 var npcId = args.npc.netID;
@@ -139,10 +139,33 @@ namespace WorldLevel
                 if (_worldData.CurrentTask == null)
                     return;
 
-                // Get the killer player
-                var player = TShock.Players.FirstOrDefault(p =>
-                    p?.Active == true && p.Index == args.npc.target
-                );
+                // Find players who interacted with (damaged) this NPC
+                TSPlayer? player = null;
+                for (int i = 0; i < Main.maxPlayers; i++)
+                {
+                    if (args.npc.playerInteraction[i])
+                    {
+                        var p = TShock.Players[i];
+                        if (p?.Active == true)
+                        {
+                            player = p;
+                            TShock.Log.Debug($"Found interacting player: {p.Name} (index {i})");
+                            break;
+                        }
+                    }
+                }
+
+                // Fallback to target if no interactions found
+                if (player == null)
+                {
+                    player = TShock.Players.FirstOrDefault(p =>
+                        p?.Active == true && p.Index == args.npc.target
+                    );
+                    if (player != null)
+                    {
+                        TShock.Log.Debug($"Using fallback target player: {player.Name}");
+                    }
+                }
 
                 if (player == null)
                 {
